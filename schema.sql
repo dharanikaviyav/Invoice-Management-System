@@ -21,6 +21,7 @@ CREATE TABLE invoices (
   subtotal DECIMAL(10,2),
   tax DECIMAL(10,2),
   grand_total DECIMAL(10,2),
+  pdf_generated BOOLEAN DEFAULT FALSE,
   FOREIGN KEY (client_id) REFERENCES clients(id)
 );
 
@@ -29,14 +30,17 @@ CREATE TABLE invoice_items (
   invoice_id INT,
   item_id INT,
   quantity INT,
-  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id),
+  FOREIGN KEY (item_id) REFERENCES items(id)
 );
 
-/* Seed data */
+/* Seed clients */
 INSERT INTO clients (name) VALUES
-('TCS'), ('Infosys'), ('Reliance'), ('Local Store');
+('TCS'), ('Infosys'), ('Wipro'), ('Reliance'), ('Local Store');
 
+/* Seed items */
 INSERT INTO items (name, price, gst_percent) VALUES
 ('Laptop', 50000, 18),
 ('Printer', 12000, 18),
-('Stationery', 500, 5);
+('Stationery', 500, 5),
+('Consulting Service', 20000, 18);
