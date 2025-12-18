@@ -14,12 +14,17 @@
 </div>
 
 <div class="content">
-  <div id="dashboard"></div>
-  <div id="create" class="hidden">
+  <div id="dashboard" class="card"></div>
+
+  <div id="create" class="card hidden">
     <select id="clientSelect"></select>
     <table id="itemsTable"></table>
     <button onclick="addItem()">Add Item</button>
+    <p>Subtotal: ₹<span id="subtotal">0</span></p>
+    <p>Tax: ₹<span id="tax">0</span></p>
+    <p><b>Grand Total: ₹<span id="grand">0</span></b></p>
     <button onclick="saveInvoice()">Save Invoice</button>
+    <button onclick="generatePDF()">Download PDF</button>
     <button onclick="printInvoice()">Print</button>
   </div>
 </div>
