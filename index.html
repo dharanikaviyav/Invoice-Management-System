@@ -1,146 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>ProInvoice</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
-<style>
-body { margin:0; font-family:Inter,Arial; background:#f4f6f8; }
-.sidebar {
-  width:240px; height:100vh; background:#111827; color:white;
-  position:fixed; padding:20px;
-}
-.sidebar a {
-  display:block; color:#d1d5db; padding:12px;
-  text-decoration:none; border-radius:8px;
-}
-.sidebar a:hover { background:#1f2937; }
-.main { margin-left:260px; padding:30px; }
-.card {
-  background:white; padding:20px;
-  border-radius:12px; margin-bottom:20px;
-}
-input, select {
-  width:100%; padding:10px; margin:8px 0;
-}
-button {
-  background:#2563eb; color:white;
-  border:none; padding:10px 16px;
-  border-radius:8px; cursor:pointer;
-}
-table { width:100%; border-collapse:collapse; }
-th,td { padding:12px; border-bottom:1px solid #e5e7eb; }
-</style>
+  <title>Invoice Hub</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-
-<body onload="loadInvoices()">
+<body onload="init()">
 
 <div class="sidebar">
-  <h2>ProInvoice</h2>
-  <a href="#" onclick="showDashboard()">Dashboard</a>
-  <a href="#" onclick="showCreate()">Create Invoice</a>
+  <h2>Invoice Hub</h2>
+  <button onclick="show('dashboard')">Dashboard</button>
+  <button onclick="show('create')">Create Invoice</button>
 </div>
 
-<div class="main">
-
-<!-- DASHBOARD -->
-<div id="dashboard" class="card">
-  <h2>Invoices</h2>
-  <table>
-    <thead>
-      <tr><th>Invoice #</th><th>Customer</th><th>Total</th></tr>
-    </thead>
-    <tbody id="invoiceTable"></tbody>
-  </table>
+<div class="content">
+  <div id="dashboard"></div>
+  <div id="create" class="hidden">
+    <select id="clientSelect"></select>
+    <table id="itemsTable"></table>
+    <button onclick="addItem()">Add Item</button>
+    <button onclick="saveInvoice()">Save Invoice</button>
+    <button onclick="printInvoice()">Print</button>
+  </div>
 </div>
 
-<!-- CREATE INVOICE -->
-<div id="create" class="card" style="display:none">
-  <h2>Create Invoice</h2>
-
-  <input id="customerName" placeholder="Customer Name">
-  <input id="customerAddress" placeholder="Customer Address">
-  <input type="date" id="invoiceDate">
-  <input type="date" id="dueDate">
-
-  <select id="sameState">
-    <option value="yes">Same State (CGST+SGST)</option>
-    <option value="no">Different State (IGST)</option>
-  </select>
-
-  <button onclick="saveInvoice()">Save Invoice</button>
-  <button onclick="generateInvoicePDF()">Download Invoice PDF</button>
-</div>
-
-</div>
-
-<script>
-const API = "http://localhost:5000/api/invoices";
-
-function showDashboard(){
-  dashboard.style.display="block";
-  create.style.display="none";
-}
-
-function showCreate(){
-  dashboard.style.display="none";
-  create.style.display="block";
-}
-
-function calculateGST(amount, sameState){
-  let tax = amount * 0.18;
-  return sameState
-    ? {cgst:tax/2, sgst:tax/2, igst:0}
-    : {cgst:0, sgst:0, igst:tax};
-}
-
-function saveInvoice(){
-  let subtotal = 1000;
-  let sameState = document.getElementById("sameState").value === "yes";
-  let gst = calculateGST(subtotal, sameState);
-
-  fetch(API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      customerName: customerName.value,
-      customerAddress: customerAddress.value,
-      invoiceDate: invoiceDate.value,
-      dueDate: dueDate.value,
-      status: "Pending",
-      subtotal,
-      cgst: gst.cgst,
-      sgst: gst.sgst,
-      igst: gst.igst,
-      grandTotal: subtotal + gst.cgst + gst.sgst + gst.igst,
-      items: [{description:"Service", quantity:1, unitPrice:1000, taxRate:18}]
-    })
-  }).then(()=>{
-    alert("Invoice Created");
-    showDashboard();
-    loadInvoices();
-  });
-}
-
-function loadInvoices(){
-  fetch(API)
-    .then(r=>r.json())
-    .then(data=>{
-      invoiceTable.innerHTML="";
-      data.forEach(i=>{
-        invoiceTable.innerHTML+=`
-          <tr>
-            <td>${i.invoice_number}</td>
-            <td>${i.customer_name}</td>
-            <td>₹${i.grand_total}</td>
-          </tr>`;
-      });
-    });
-}
-</script>
-
+<script src="app.js"></script>
 </body>
 </html>

@@ -1,46 +1,7 @@
-body {
-  margin: 0;
-  font-family: Inter, Arial;
-  background: #f4f6f8;
-}
-
+body { font-family: Arial; margin:0; display:flex; }
 .sidebar {
-  width: 230px;
-  height: 100vh;
-  background: #111827;
-  color: white;
-  position: fixed;
-  padding: 20px;
+  width:220px; background:#f5f7fb; padding:20px;
 }
-
-.sidebar a {
-  display: block;
-  color: #d1d5db;
-  padding: 10px;
-  text-decoration: none;
-}
-
-.sidebar a:hover {
-  background: #1f2937;
-}
-
-.main {
-  margin-left: 250px;
-  padding: 30px;
-}
-
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-}
-
-button {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
+.content { flex:1; padding:20px; }
+.hidden { display:none; }
+button { margin:5px; padding:8px 12px; }

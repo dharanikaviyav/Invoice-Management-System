@@ -4,6 +4,6 @@ def get_db():
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="password",  # change if needed
+        password="password",
         database="invoice_db"
     )

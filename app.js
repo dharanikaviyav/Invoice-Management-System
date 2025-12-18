@@ -1,170 +1,72 @@
-const API = "http://localhost:5000/api/invoices";
+const API = "http://localhost:5000";
+let items = [];
 
-function calculateGST(amount, rate, sameState) {
-  let tax = amount * rate / 100;
-  return sameState
-    ? { cgst: tax / 2, sgst: tax / 2, igst: 0 }
-    : { cgst: 0, sgst: 0, igst: tax };
+async function init() {
+  loadClients();
+  loadItems();
+  loadDashboard();
 }
 
-function saveInvoice() {
-  const subtotal = 1000;
-  const gst = calculateGST(subtotal, 18, true);
-
-  fetch(API, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      customerName: "Test Client",
-      customerAddress: "Chennai",
-      invoiceDate: "2025-01-01",
-      dueDate: "2025-01-10",
-      status: "Pending",
-      subtotal,
-      cgst: gst.cgst,
-      sgst: gst.sgst,
-      igst: gst.igst,
-      grandTotal: subtotal + gst.cgst + gst.sgst + gst.igst,
-      items: [
-        { description: "Service A", quantity: 1, unitPrice: 1000, taxRate: 18 }
-      ]
-    })
-  }).then(() => alert("Invoice Created"));
+function show(id){
+  document.querySelectorAll(".content > div")
+    .forEach(d => d.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
 }
 
-function loadInvoices() {
-  fetch(API)
-    .then(res => res.json())
-    .then(data => {
-      const tbody = document.querySelector("tbody");
-      tbody.innerHTML = "";
-      data.forEach(i => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${i.invoice_number}</td>
-            <td>${i.customer_name}</td>
-            <td>₹${i.grand_total}</td>
-          </tr>`;
-      });
-    });
+async function loadClients(){
+  const r = await fetch(API+"/clients");
+  const data = await r.json();
+  clientSelect.innerHTML="";
+  data.forEach(c=>{
+    clientSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+  });
 }
-function generateInvoicePDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
 
-  const customerNameVal = document.getElementById("customerName").value;
-  const customerAddressVal = document.getElementById("customerAddress").value;
-  const invoiceDateVal = document.getElementById("invoiceDate").value;
-  const dueDateVal = document.getElementById("dueDate").value;
+async function loadItems(){
+  const r = await fetch(API+"/items");
+  items = await r.json();
+  addItem();
+}
 
-  const subtotal = 1000;
-  const gstRate = 18;
-  const sameState = document.getElementById("sameState").value === "yes";
-  const gst = calculateGST(subtotal, sameState);
+function addItem(){
+  const t = document.getElementById("itemsTable");
+  const i = items[0];
+  t.innerHTML += `
+    <tr>
+      <td>${i.name}</td>
+      <td><input value="1"></td>
+    </tr>`;
+}
 
-  const grandTotal = subtotal + gst.cgst + gst.sgst + gst.igst;
+async function saveInvoice(){
+  const payload = {
+    client_id: clientSelect.value,
+    invoice_date: new Date().toISOString().slice(0,10),
+    subtotal: 50000,
+    tax: 9000,
+    grand_total: 59000,
+    items: [{item_id:1, qty:1}]
+  };
 
-  /* ===== HEADER ===== */
-  doc.setFontSize(20);
-  doc.setTextColor(37, 99, 235);
-  doc.text("ProInvoice", 14, 20);
-
-  doc.setFontSize(10);
-  doc.setTextColor(100);
-  doc.text("Professional Invoice Management System", 14, 27);
-
-  doc.setFontSize(16);
-  doc.setTextColor(0);
-  doc.text("INVOICE", 160, 22);
-
-  doc.setDrawColor(220);
-  doc.line(14, 30, 196, 30);
-
-  /* ===== CUSTOMER INFO ===== */
-  doc.setFontSize(10);
-  doc.setTextColor(120);
-  doc.text("BILL TO", 14, 40);
-
-  doc.setFontSize(12);
-  doc.setTextColor(0);
-  doc.text(customerNameVal, 14, 46);
-
-  doc.setFontSize(10);
-  doc.setTextColor(80);
-  doc.text(customerAddressVal, 14, 52);
-
-  /* ===== INVOICE META ===== */
-  doc.setFontSize(10);
-  doc.setTextColor(120);
-  doc.text("Invoice Date:", 140, 40);
-  doc.text("Due Date:", 140, 46);
-
-  doc.setTextColor(0);
-  doc.text(invoiceDateVal, 170, 40);
-  doc.text(dueDateVal, 170, 46);
-
-  /* ===== ITEMS TABLE ===== */
-  doc.autoTable({
-    startY: 60,
-    head: [["Description", "Qty", "Unit Price", "GST", "Total"]],
-    body: [
-      [
-        "Service",
-        "1",
-        "₹1000",
-        `${gstRate}%`,
-        "₹1000"
-      ]
-    ],
-    styles: {
-      fontSize: 10,
-      cellPadding: 6
-    },
-    headStyles: {
-      fillColor: [37, 99, 235],
-      textColor: 255
-    },
-    columnStyles: {
-      1: { halign: "right" },
-      2: { halign: "right" },
-      3: { halign: "right" },
-      4: { halign: "right" }
-    }
+  await fetch(API+"/invoices", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify(payload)
   });
 
-  let finalY = doc.lastAutoTable.finalY + 10;
+  alert("Invoice Saved");
+  loadDashboard();
+}
 
-  /* ===== TOTALS ===== */
-  doc.setFontSize(10);
-  doc.setTextColor(80);
-  doc.text("Subtotal:", 140, finalY);
-  doc.text(`₹${subtotal.toFixed(2)}`, 195, finalY, { align: "right" });
+async function loadDashboard(){
+  const r = await fetch(API+"/invoices");
+  const data = await r.json();
+  dashboard.innerHTML = "<h2>Dashboard</h2>";
+  data.forEach(i=>{
+    dashboard.innerHTML += `<p>${i.invoice_number} - ₹${i.grand_total}</p>`;
+  });
+}
 
-  if (sameState) {
-    doc.text("CGST (9%):", 140, finalY + 6);
-    doc.text(`₹${gst.cgst.toFixed(2)}`, 195, finalY + 6, { align: "right" });
-
-    doc.text("SGST (9%):", 140, finalY + 12);
-    doc.text(`₹${gst.sgst.toFixed(2)}`, 195, finalY + 12, { align: "right" });
-  } else {
-    doc.text("IGST (18%):", 140, finalY + 6);
-    doc.text(`₹${gst.igst.toFixed(2)}`, 195, finalY + 6, { align: "right" });
-  }
-
-  doc.setFontSize(14);
-  doc.setTextColor(37, 99, 235);
-  doc.text("Grand Total:", 140, finalY + 24);
-  doc.text(`₹${grandTotal.toFixed(2)}`, 195, finalY + 24, { align: "right" });
-
-  /* ===== FOOTER ===== */
-  doc.setFontSize(9);
-  doc.setTextColor(150);
-  doc.text(
-    "Thank you for your business • Generated by ProInvoice",
-    105,
-    285,
-    { align: "center" }
-  );
-
-  doc.save("Invoice.pdf");
+function printInvoice(){
+  window.print();
 }

@@ -6,62 +6,63 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
-def generate_invoice_number(cursor):
-    cursor.execute("SELECT COUNT(*) FROM invoices")
-    count = cursor.fetchone()[0] + 1
-    return f"INV-{datetime.now().year}-{str(count).zfill(4)}"
+def generate_invoice_no(cur):
+    cur.execute("SELECT COUNT(*) FROM invoices")
+    return f"INV-{datetime.now().year}-{cur.fetchone()[0]+1:04d}"
 
-@app.route("/api/invoices", methods=["POST"])
-def create_invoice():
-    data = request.json
+@app.route("/clients", methods=["GET"])
+def clients():
     db = get_db()
-    cursor = db.cursor()
+    cur = db.cursor(dictionary=True)
+    cur.execute("SELECT * FROM clients")
+    return jsonify(cur.fetchall())
 
-    invoice_number = generate_invoice_number(cursor)
+@app.route("/items", methods=["GET"])
+def items():
+    db = get_db()
+    cur = db.cursor(dictionary=True)
+    cur.execute("SELECT * FROM items")
+    return jsonify(cur.fetchall())
 
-    cursor.execute("""
-        INSERT INTO invoices
-        (invoice_number, customer_name, customer_address, invoice_date, due_date,
-         status, subtotal, cgst, sgst, igst, grand_total)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-    """, (
-        invoice_number,
-        data["customerName"],
-        data["customerAddress"],
-        data["invoiceDate"],
-        data["dueDate"],
-        data["status"],
-        data["subtotal"],
-        data["cgst"],
-        data["sgst"],
-        data["igst"],
-        data["grandTotal"]
-    ))
+@app.route("/invoices", methods=["GET","POST"])
+def invoices():
+    db = get_db()
+    cur = db.cursor(dictionary=True)
 
-    invoice_id = cursor.lastrowid
+    if request.method == "POST":
+        data = request.json
+        invoice_no = generate_invoice_no(cur)
 
-    for item in data["items"]:
-        cursor.execute("""
-            INSERT INTO invoice_items
-            (invoice_id, description, quantity, unit_price, tax_rate)
-            VALUES (%s,%s,%s,%s,%s)
+        cur.execute("""
+          INSERT INTO invoices
+          (invoice_number, client_id, invoice_date, subtotal, tax, grand_total)
+          VALUES (%s,%s,%s,%s,%s,%s)
         """, (
-            invoice_id,
-            item["description"],
-            item["quantity"],
-            item["unitPrice"],
-            item["taxRate"]
+            invoice_no,
+            data["client_id"],
+            data["invoice_date"],
+            data["subtotal"],
+            data["tax"],
+            data["grand_total"]
         ))
 
-    db.commit()
-    return jsonify({"message": "Invoice Created", "invoiceNumber": invoice_number}), 201
+        invoice_id = cur.lastrowid
 
-@app.route("/api/invoices", methods=["GET"])
-def get_invoices():
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM invoices ORDER BY id DESC")
-    return jsonify(cursor.fetchall())
+        for it in data["items"]:
+            cur.execute("""
+              INSERT INTO invoice_items (invoice_id, item_id, quantity)
+              VALUES (%s,%s,%s)
+            """, (invoice_id, it["item_id"], it["qty"]))
+
+        db.commit()
+        return jsonify({"invoice_number": invoice_no})
+
+    cur.execute("""
+      SELECT i.invoice_number, c.name, i.grand_total
+      FROM invoices i JOIN clients c ON i.client_id=c.id
+      ORDER BY i.id DESC
+    """)
+    return jsonify(cur.fetchall())
 
 if __name__ == "__main__":
     app.run(debug=True)
